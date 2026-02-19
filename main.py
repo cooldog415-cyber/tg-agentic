@@ -9,6 +9,10 @@ OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 client = OpenAI(api_key=OPENAI_API_KEY)
+MODEL=os.environ.get("OPENAI_MODEL","gpt-4.1-mini")
+TEMP_ROUTER=float(os.environ.get("TEMP_ROUTER","0.0"))
+TEMP_ANALYSIS=float(os.environ.get("TEMP_ROUTER","0.2"))
+TEMP_STRATEGY=float(os.environ.get("TEMP_ROUTER","0.4"))
 
 app = FastAPI()
 
@@ -27,14 +31,14 @@ AGENTS = [
     ("LG Chem Lens", SYS_LENS),
 ]
 
-def llm(system: str, user: str) -> str:
+def llm(system: str, user: str, temperatur: Float) -> str:
     resp = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model=model,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        temperature=0.2,
+        temperature=TEMPERATURE,
     )
     return resp.choices[0].message.content.strip()
 
@@ -68,6 +72,10 @@ async def webhook(req: Request):
     # --- Orchestrator ---
     outputs = []
     for name, sys in AGENTS:
+        if name == "LG Chem Lens":
+            temp=TEMP_STRATEGY
+        else:
+            temp=TEMP_ANALYSIS
         try:
             ans = llm(sys, question)
             outputs.append(f"📌 [{name}]\n{ans}")
