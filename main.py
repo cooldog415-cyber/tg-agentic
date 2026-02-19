@@ -57,6 +57,7 @@ print("telegram send exception:",
 @app.post("/webhook")
 async def webhook(req: Request):
     update = await req.json()
+    print("incoming update:", update)
     msg = update.get("message") or update.get("edited_message")
     if not msg:
         return {"ok": True}
