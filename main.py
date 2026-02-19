@@ -64,6 +64,7 @@ async def webhook(req: Request):
     print("RAW UPDATE:", update)
 
     msg = (update.get("message") or update.get("edited_message") or update.get("channel_post")
+          )
     if not msg:
         return {"ok": True}
 
