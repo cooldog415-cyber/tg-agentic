@@ -62,17 +62,33 @@ def send_message(chat_id: int, text: str):
 @app.post("/webhook")
 async def webhook(req: Request):
     update = await req.json()
-        print("raw update:", update)
+    print("RAW UPDATE:", update)
 
-    msg = update.get("message") or update.get("edited_message") or update.get("channel_post")
+    msg = update.get("message") or update.get("edited_message")
     if not msg:
-        print("no message found in update")
+        print("No message in update")
         return {"ok": True}
 
+    chat_id = msg["chat"]["id"]
     text = msg.get("text")
-        print("extracted text:", text)
+    print("Extracted text:", text)
+
     if not text:
+        print("No text found")
         return {"ok": True}
+
+    if "/ops" not in text:
+        print("Not an /ops command")
+        return {"ok": True}
+
+    # 질문 추출
+    parts = text.split(" ", 1)
+    question = parts[1] if len(parts) > 1 else ""
+    print("Extracted question:", question)
+
+    send_message(chat_id, f"질문 확인: {question}")
+
+    return {"ok": True}
 
     # 트리거 명령어
     if text.startswith("/ops"):
