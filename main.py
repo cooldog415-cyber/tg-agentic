@@ -12,8 +12,7 @@ def send_message(chat_id: int, text: str):
         r = requests.post(
             f"{TELEGRAM_API}/sendMessage",
             json={"chat_id": chat_id, "text": text},
-            timeout=20,
-        )
+            timeout=20,)
         print("Telegram response:", r.status_code, r.text)
     except Exception as e:
         print("Telegram send exception:", e)
@@ -27,8 +26,7 @@ async def webhook(req: Request):
     msg = (
         update.get("message")
         or update.get("edited_message")
-        or update.get("channel_post")
-    )
+        or update.get("channel_post"))
 
     if not msg:
         return {"ok": True}
