@@ -43,16 +43,21 @@ def llm(system: str, user: str, temperatur: Float) -> str:
     return resp.choices[0].message.content.strip()
 
 def send_message(chat_id: int, text: str):
-    print("sending message to telegram...chat_id=", chat_id)
+    print("Sending message to Telegram... chat_id=", chat_id)
+
     try:
-        r=requests.post(f"{TELEGRAM_API}/sendMessage", json={
-        "chat_id": chat_id,
-        "text": text
-    }, timeout=20)
-    print("telegram response:",r.status_code, r.text)
-except exception as e:
-print("telegram send exception:",
-      repr(e))
+        r = requests.post(
+            f"{TELEGRAM_API}/sendMessage",
+            json={
+                "chat_id": chat_id,
+                "text": text
+            },
+            timeout=20
+        )
+        print("Telegram response:", r.status_code, r.text)
+
+    except Exception as e:
+        print("Telegram send exception:", e)
 
 @app.post("/webhook")
 async def webhook(req: Request):
