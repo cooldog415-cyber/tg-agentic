@@ -68,10 +68,13 @@ async def webhook(req: Request):
         return {"ok": True}
 
     # 트리거 명령어
-    if not text.startswith("/ops"):
-        return {"ok": True}
-
-    question = text[len("/ops"):].strip()
+    if text.startswith("/ops"):
+        question=text.split(" ",1)[1] if " " in text else ""
+    elif text.startswith("/ops@"):
+        parts=text.split(" ",1)
+        question=parts[1] if len(parts) > 1
+        else ""
+    else:
     if not question:
         send_message(chat_id, "질문을 같이 적어주세요.")
         return {"ok": True}
