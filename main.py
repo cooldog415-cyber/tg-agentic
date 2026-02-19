@@ -1,3 +1,4 @@
+# main.py
 import os
 import json
 import requests
@@ -5,7 +6,7 @@ from fastapi import FastAPI, Request
 from openai import OpenAI
 
 # =========================
-# Env
+# ENV
 # =========================
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
@@ -22,69 +23,64 @@ TEMP_STRATEGY = float(os.environ.get("TEMP_STRATEGY", "0.4"))
 app = FastAPI()
 
 # =========================
-# System Prompts
+# SYSTEM PROMPTS
 # =========================
 
 SYS_ROUTER = """
 You are a strict routing AI.
-Classify the question into required analysis modules.
 
 Available modules:
 - feedstock
 - compete
 - policy
 - downstream
-- strategy
 
-Return JSON only:
+Return JSON only like:
 {
-  "modules": ["feedstock","compete"],
-  "reason": "short explanation"
+  "modules": ["feedstock","compete"]
 }
-Do NOT explain outside JSON.
+
+Return only JSON. No explanation.
 """
 
-SYS_FEEDSTOCK = """Feedstock & Energy Controller.
-Focus: oil, naphtha, LPG, utilities, spreads, FX.
-Format:
-1) Key shift
+SYS_FEEDSTOCK = """
+Feedstock & Energy Controller.
+1) Key change
 2) Margin impact
 3) Operational action
-4) Premium product impact
+4) Premium impact
 """
 
-SYS_COMPETE = """Competition Intelligence.
-Focus: capacity, dumping, TA, region shifts.
-Format:
-1) Competitive event
-2) Impact
+SYS_COMPETE = """
+Competition Intelligence.
+1) Competitive shift
+2) Our impact
 3) Tactical response
 4) Premium defense
 """
 
-SYS_POLICY = """Policy & Regulation.
-Focus: CBAM, carbon, trade, domestic competitiveness.
-Format:
+SYS_POLICY = """
+Policy & Regulation.
 1) Policy summary
 2) Business impact
 3) Required action
 """
 
-SYS_DOWNSTREAM = """Downstream & Customers.
-Focus: Auto, battery, construction, packaging.
-Format:
+SYS_DOWNSTREAM = """
+Downstream & Customer.
 1) Demand signal
-2) Customer pain point
+2) Customer issue
 3) Premium opportunity
-4) Execution step
+4) Execution
 """
 
-SYS_LENS = """LG Chem Strategy Lens.
-Deliver executive-level action.
-Format:
+SYS_LENS = """
+You are LG Chem Strategy Lens.
+Integrate analysis into executive-level decision.
+
 1) Meaning for LG Chem
 2) Good options (2)
-3) Bad option (1)
+3) Risk option (1)
 4) 30/90/180 day roadmap
 """
 
@@ -96,10 +92,10 @@ AGENT_MAP = {
 }
 
 # =========================
-# LLM Helper
+# LLM FUNCTION
 # =========================
 def llm(system: str, user: str, temp: float):
-    resp = client.chat.completions.create(
+    response = client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": system},
@@ -107,25 +103,28 @@ def llm(system: str, user: str, temp: float):
         ],
         temperature=temp,
     )
-    return resp.choices[0].message.content.strip()
+    return response.choices[0].message.content.strip()
 
-
+# =========================
+# TELEGRAM SEND
+# =========================
 def send_message(chat_id: int, text: str):
-    MAX_LEN = 3800
-    chunks = [text[i:i+MAX_LEN] for i in range(0, len(text), MAX_LEN)] or [""]
+    MAX_LEN = 3500
+    parts = [text[i:i+MAX_LEN] for i in range(0, len(text), MAX_LEN)] or [""]
 
-    for c in chunks:
+    for part in parts:
         requests.post(
             f"{TELEGRAM_API}/sendMessage",
-            json={"chat_id": chat_id, "text": c},
+            json={"chat_id": chat_id, "text": part},
             timeout=20,
         )
 
 # =========================
-# Webhook
+# WEBHOOK
 # =========================
 @app.post("/webhook")
 async def webhook(req: Request):
+
     update = await req.json()
 
     msg = (
@@ -144,6 +143,7 @@ async def webhook(req: Request):
     if not text or "/ops" not in text:
         return {"ok": True}
 
+    # 질문 추출
     parts = text.split(" ", 1)
     question = parts[1].strip() if len(parts) > 1 else ""
 
@@ -152,41 +152,41 @@ async def webhook(req: Request):
         return {"ok": True}
 
     # =========================
-    # 1️⃣ ROUTER 단계
+    # 1️⃣ ROUTER
     # =========================
     try:
         router_raw = llm(SYS_ROUTER, question, TEMP_ROUTER)
         router_json = json.loads(router_raw)
         modules = router_json.get("modules", [])
     except:
-        modules = ["feedstock","compete","downstream"]
+        modules = ["compete", "downstream"]
 
-    outputs = []
+    analysis_results = []
 
     # =========================
-    # 2️⃣ 필요한 Agent만 실행
+    # 2️⃣ ANALYSIS AGENTS
     # =========================
     for m in modules:
         if m in AGENT_MAP:
             try:
-                ans = llm(AGENT_MAP[m], question, TEMP_ANALYSIS)
-                outputs.append(f"📌 [{m.upper()}]\n{ans}")
+                result = llm(AGENT_MAP[m], question, TEMP_ANALYSIS)
+                analysis_results.append(f"📌 [{m.upper()}]\n{result}")
             except Exception as e:
-                outputs.append(f"⚠ [{m}] error")
+                analysis_results.append(f"⚠ [{m}] error")
+
+    combined_text = "\n\n".join(analysis_results)
 
     # =========================
-    # 3️⃣ 전략 통합 (Lens)
+    # 3️⃣ STRATEGY LENS
     # =========================
-    combined_text = "\n\n".join(outputs)
-
     try:
-        final = llm(SYS_LENS, combined_text, TEMP_STRATEGY)
-        outputs.append(f"\n\n🔥 [LG STRATEGY LENS]\n{final}")
+        final_strategy = llm(SYS_LENS, combined_text, TEMP_STRATEGY)
+        analysis_results.append(f"\n🔥 [LG STRATEGY LENS]\n{final_strategy}")
     except:
         pass
 
-    final_report = "\n\n".join(outputs)
+    final_output = "\n\n".join(analysis_results)
 
-    send_message(chat_id, final_report)
+    send_message(chat_id, final_output)
 
     return {"ok": True}
