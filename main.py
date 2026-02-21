@@ -6,7 +6,7 @@ from openai import OpenAI
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
-print("API KEY PREFIX:", OPENAI_API_KEY[:20])
+Print("API KEY LENGTH:",len(OPENAI_API)KEY))
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
