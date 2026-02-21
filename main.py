@@ -223,5 +223,5 @@ async def webhook(req: Request):
     final_output = "\n\n".join(analysis_results)
 
     send_message(chat_id, final_output)
-
     return {"ok": True}
+print("API KEY PREFIX:",OPENAI_API_KER[:20])
