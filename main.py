@@ -3,8 +3,10 @@ import httpx
 from fastapi import FastAPI, Request
 from openai import AsyncOpenAI
 
-BOT_TOKEN = os.environ["BOT_TOKEN"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+#BOT_TOKEN = os.environ["BOT_TOKEN"]
+BOT_TOKEN = "8443433866:AAH381UXTt6GY-QUgVfXNK7qc7RMKeKu5fI"
+#OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+OPENAI_API_KEY = "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"
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 app = FastAPI()
