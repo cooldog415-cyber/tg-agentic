@@ -1,24 +1,23 @@
 import os
-import requests
+import httpx
 from fastapi import FastAPI, Request
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-client = OpenAI(api_key=OPENAI_API_KEY)
-
+client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
-
 app = FastAPI()
 
-def send_message(chat_id: int, text: str):
+async def send_message(chat_id: int, text: str):
     try:
-        r = requests.post(
-            f"{TELEGRAM_API}/sendMessage",
-            json={"chat_id": chat_id, "text": text},
-            timeout=20,
-        )
-        print("Telegram response:", r.status_code)
+        async with httpx.AsyncClient() as http:
+            r = await http.post(
+                f"{TELEGRAM_API}/sendMessage",
+                json={"chat_id": chat_id, "text": text},
+                timeout=20,
+            )
+            print("Telegram response:", r.status_code)
     except Exception as e:
         print("Telegram send error:", e)
 
@@ -32,21 +31,24 @@ async def webhook(req: Request):
         return {"ok": True}
 
     chat_id = msg["chat"]["id"]
-    text = msg.get("text")
+    text = msg.get("text", "")
 
-    if not text or "/ops" not in text:
+    if not text.startswith("/ops"):
         return {"ok": True}
 
-    question = text.replace("/ops", "").strip()
+    question = text[4:].strip()
+    if not question:
+        await send_message(chat_id, "질문을 입력해주세요. 예: /ops 오늘 날씨 어때?")
+        return {"ok": True}
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": question}],
         )
         answer = response.choices[0].message.content
     except Exception as e:
         answer = f"OpenAI error: {e}"
 
-    send_message(chat_id, answer)
+    await send_message(chat_id, answer)
     return {"ok": True}
