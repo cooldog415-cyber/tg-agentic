@@ -1,25 +1,24 @@
 import os
-import httpx
+import requests
 from fastapi import FastAPI, Request
-from openai import AsyncOpenAI
+from openai import OpenAI
 
-#BOT_TOKEN = os.environ["BOT_TOKEN"]
-BOT_TOKEN = "8443433866:AAH381UXTt6GY-QUgVfXNK7qc7RMKeKu5fI"
-#OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_API_KEY = "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"
-client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+client = OpenAI(api_key=OPENAI_API_KEY)
+
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
+
 app = FastAPI()
 
-async def send_message(chat_id: int, text: str):
+def send_message(chat_id: int, text: str):
     try:
-        async with httpx.AsyncClient() as http:
-            r = await http.post(
-                f"{TELEGRAM_API}/sendMessage",
-                json={"chat_id": chat_id, "text": text},
-                timeout=20,
-            )
-            print("Telegram response:", r.status_code)
+        r = requests.post(
+            f"{TELEGRAM_API}/sendMessage",
+            json={"chat_id": chat_id, "text": text},
+            timeout=20,
+        )
+        print("Telegram response:", r.status_code)
     except Exception as e:
         print("Telegram send error:", e)
 
@@ -33,24 +32,21 @@ async def webhook(req: Request):
         return {"ok": True}
 
     chat_id = msg["chat"]["id"]
-    text = msg.get("text", "")
+    text = msg.get("text")
 
-    if not text.startswith("/ops"):
+    if not text or "/ops" not in text:
         return {"ok": True}
 
-    question = text[4:].strip()
-    if not question:
-        await send_message(chat_id, "질문을 입력해주세요. 예: /ops 오늘 날씨 어때?")
-        return {"ok": True}
+    question = text.replace("/ops", "").strip()
 
     try:
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
             messages=[{"role": "user", "content": question}],
         )
         answer = response.choices[0].message.content
     except Exception as e:
         answer = f"OpenAI error: {e}"
 
-    await send_message(chat_id, answer)
+    send_message(chat_id, answer)
     return {"ok": True}
